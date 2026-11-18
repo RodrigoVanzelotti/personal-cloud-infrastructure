@@ -1,0 +1,65 @@
+name: Terraform apply
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      solution:
+        description: Solution directory name
+        required: true
+        type: string
+      environment:
+        description: Environment
+        required: true
+        type: choice
+        options: [stage, prod]
+permissions:
+  contents: read
+jobs:
+  changes:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.changes.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r requirements.txt
+      - id: changes
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event.before }}
+          SOLUTION: ${{ inputs.solution }}
+          ENVIRONMENT: ${{ inputs.environment }}
+        run: |
+          if [ "$EVENT" = workflow_dispatch ]; then
+            python scripts/validate.py --solution "$SOLUTION" --environment "$ENVIRONMENT" --deployable
+            MATRIX=$(python -c 'import json,os; print(json.dumps([{"solution":os.environ["SOLUTION"],"environment":os.environ["ENVIRONMENT"]}]))')
+          else
+            if [ "$BASE" = 0000000000000000000000000000000000000000 ]; then
+              BASE=$(git hash-object -t tree /dev/null)
+            fi
+            MATRIX=$(python scripts/changed_environments.py --base "$BASE")
+          fi
+          echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
+  apply:
+    needs: changes
+    if: needs.changes.outputs.matrix != '[]'
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.changes.outputs.matrix) }}
+    uses: ./.github/workflows/deploy-environment.yml
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
+    with:
+      solution: ${{ matrix.solution }}
+      environment: ${{ matrix.environment }}
+    secrets: inherit

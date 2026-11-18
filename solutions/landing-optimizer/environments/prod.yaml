@@ -1,0 +1,8 @@
+environment: prod
+enabled: false
+gcp:
+  # Existing project; prod mapping must be confirmed during adoption.
+  project_id: landing-optimizer-landing-page
+  region: southamerica-east1
+state_bucket: null
+deployments: {}

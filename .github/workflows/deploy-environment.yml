@@ -1,0 +1,96 @@
+name: Deploy one environment
+on:
+  workflow_call:
+    inputs:
+      solution:
+        required: true
+        type: string
+      environment:
+        required: true
+        type: string
+permissions:
+  contents: read
+  actions: read
+  id-token: write
+concurrency:
+  group: cloud-${{ inputs.solution }}-${{ inputs.environment }}
+  cancel-in-progress: false
+jobs:
+  infrastructure:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.solution }}-${{ inputs.environment }}
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
+    outputs:
+      hosting: ${{ steps.context.outputs.hosting }}
+      project_id: ${{ steps.context.outputs.project_id }}
+    env:
+      TF_VAR_solution: ${{ inputs.solution }}
+      TF_VAR_environment: ${{ inputs.environment }}
+      TF_IN_AUTOMATION: 'true'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Enforce production approval configuration before cloud authentication
+        env:
+          DEPLOY_SOLUTION: ${{ inputs.solution }}
+          DEPLOY_ENVIRONMENT: ${{ inputs.environment }}
+          GH_TOKEN: ${{ github.token }}
+        run: python scripts/check_approval.py
+      - uses: ./.github/actions/setup-terraform
+        with:
+          solution: ${{ inputs.solution }}
+          environment: ${{ inputs.environment }}
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+      - id: context
+        env:
+          SOLUTION: ${{ inputs.solution }}
+          ENVIRONMENT: ${{ inputs.environment }}
+        run: python scripts/context.py "$SOLUTION" "$ENVIRONMENT"
+      - name: Apply exactly the checked plan
+        run: |
+          set -o pipefail
+          terraform -chdir=terraform/stack plan -input=false -lock-timeout=5m -out=change.tfplan
+          terraform -chdir=terraform/stack show -json change.tfplan | python scripts/check_plan.py
+          terraform -chdir=terraform/stack show -no-color change.tfplan >> "$GITHUB_STEP_SUMMARY"
+          terraform -chdir=terraform/stack apply -input=false change.tfplan
+          terraform -chdir=terraform/stack plan -input=false -lock-timeout=5m -detailed-exitcode
+      - name: Record infrastructure result
+        if: always()
+        env:
+          STATUS: ${{ job.status }}
+          SOLUTION: ${{ inputs.solution }}
+          ENVIRONMENT: ${{ inputs.environment }}
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          Path('infrastructure-record.json').write_text(json.dumps({
+              'solution': os.environ['SOLUTION'], 'environment': os.environ['ENVIRONMENT'],
+              'infra_commit': os.environ['GITHUB_SHA'], 'status': os.environ['STATUS'],
+              'run_id': os.environ['GITHUB_RUN_ID'],
+          }, indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: infrastructure-${{ inputs.solution }}-${{ inputs.environment }}
+          path: infrastructure-record.json
+  hosting:
+    needs: infrastructure
+    if: needs.infrastructure.outputs.hosting != '[]'
+    uses: ./.github/workflows/deploy-firebase.yml
+    with:
+      solution: ${{ inputs.solution }}
+      environment: ${{ inputs.environment }}
+      hosting: ${{ needs.infrastructure.outputs.hosting }}
+      project_id: ${{ needs.infrastructure.outputs.project_id }}
+    secrets: inherit

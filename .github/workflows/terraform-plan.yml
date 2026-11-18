@@ -1,0 +1,61 @@
+name: Terraform plan
+on:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  changes:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.changes.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r requirements.txt
+      - id: changes
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: echo "matrix=$(python scripts/changed_environments.py --base "$BASE" --head "$HEAD")" >> "$GITHUB_OUTPUT"
+  plan:
+    needs: changes
+    if: needs.changes.outputs.matrix != '[]'
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.changes.outputs.matrix) }}
+    runs-on: ubuntu-latest
+    environment: ${{ matrix.solution }}-${{ matrix.environment }}-plan
+    concurrency:
+      group: cloud-${{ matrix.solution }}-${{ matrix.environment }}
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      TF_VAR_solution: ${{ matrix.solution }}
+      TF_VAR_environment: ${{ matrix.environment }}
+      TF_IN_AUTOMATION: 'true'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: ./.github/actions/setup-terraform
+        with:
+          solution: ${{ matrix.solution }}
+          environment: ${{ matrix.environment }}
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+      - name: Plan and block destruction
+        run: |
+          set -o pipefail
+          terraform -chdir=terraform/stack plan -input=false -lock-timeout=5m -out=change.tfplan
+          terraform -chdir=terraform/stack show -json change.tfplan | python scripts/check_plan.py
+          terraform -chdir=terraform/stack show -no-color change.tfplan >> "$GITHUB_STEP_SUMMARY"

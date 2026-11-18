@@ -1,0 +1,337 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "environment",
+    "enabled",
+    "gcp",
+    "state_bucket",
+    "deployments"
+  ],
+  "properties": {
+    "environment": {
+      "enum": [
+        "stage",
+        "prod"
+      ]
+    },
+    "enabled": {
+      "type": "boolean"
+    },
+    "gcp": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "project_id",
+        "region"
+      ],
+      "properties": {
+        "project_id": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]{4,28}[a-z0-9]$"
+            }
+          ]
+        },
+        "region": {
+          "type": "string",
+          "pattern": "^[a-z]+-[a-z]+[0-9]$"
+        }
+      }
+    },
+    "state_bucket": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9._-]{1,61}[a-z0-9]$"
+        }
+      ]
+    },
+    "artifact_registry": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9-]{0,62}$"
+      }
+    },
+    "deployments": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9-]{0,62}$"
+      },
+      "additionalProperties": {
+        "oneOf": [
+          {
+            "$ref": "#/$defs/cloud_run_service"
+          },
+          {
+            "$ref": "#/$defs/firebase_hosting"
+          }
+        ]
+      }
+    }
+  },
+  "$defs": {
+    "cloud_run_service": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "service_name",
+        "image",
+        "service_account",
+        "public",
+        "ingress",
+        "port",
+        "scaling"
+      ],
+      "properties": {
+        "service_name": {
+          "type": "string",
+          "pattern": "^[a-z](?:[a-z0-9-]{0,47}[a-z0-9])?$"
+        },
+        "image": {
+          "type": "string",
+          "pattern": "^[a-z0-9-]+-docker\\.pkg\\.dev/[a-z0-9-]+/[a-z0-9_.-]+/[a-zA-Z0-9_./-]+@sha256:[a-f0-9]{64}$"
+        },
+        "service_account": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]{4,28}[a-z0-9]@[a-z][a-z0-9-]+\\.iam\\.gserviceaccount\\.com$"
+        },
+        "public": {
+          "type": "boolean"
+        },
+        "ingress": {
+          "enum": [
+            "INGRESS_TRAFFIC_ALL",
+            "INGRESS_TRAFFIC_INTERNAL_ONLY",
+            "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"
+          ]
+        },
+        "port": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535
+        },
+        "cpu": {
+          "enum": [
+            "1",
+            "2",
+            "4",
+            "8"
+          ]
+        },
+        "memory": {
+          "type": "string",
+          "pattern": "^[1-9][0-9]*(Mi|Gi)$"
+        },
+        "env": {
+          "type": "object",
+          "propertyNames": {
+            "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+          },
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "secret_env": {
+          "type": "object",
+          "propertyNames": {
+            "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "secret",
+              "version"
+            ],
+            "properties": {
+              "secret": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_-]{1,255}$"
+              },
+              "version": {
+                "type": "string",
+                "pattern": "^[1-9][0-9]*$"
+              }
+            }
+          }
+        },
+        "scaling": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "min_instances",
+            "max_instances"
+          ],
+          "properties": {
+            "min_instances": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "max_instances": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000
+            }
+          }
+        },
+        "timeout_seconds": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 3600
+        },
+        "max_concurrency": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000
+        },
+        "cpu_idle": {
+          "type": "boolean"
+        },
+        "startup_cpu_boost": {
+          "type": "boolean"
+        },
+        "invoker_iam_disabled": {
+          "type": "boolean"
+        },
+        "service_scaling": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "max_instances": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2000
+            }
+          },
+          "required": [
+            "max_instances"
+          ]
+        },
+        "startup_probe": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "failure_threshold": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 30
+            },
+            "period_seconds": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 240
+            },
+            "timeout_seconds": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 240
+            },
+            "http_get": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "pattern": "^/"
+                },
+                "port": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 65535
+                }
+              },
+              "required": [
+                "path",
+                "port"
+              ]
+            }
+          },
+          "required": [
+            "failure_threshold",
+            "period_seconds",
+            "timeout_seconds",
+            "http_get"
+          ]
+        },
+        "traffic": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "type": {
+                "enum": [
+                  "TRAFFIC_TARGET_ALLOCATION_TYPE_LATEST",
+                  "TRAFFIC_TARGET_ALLOCATION_TYPE_REVISION"
+                ]
+              },
+              "percent": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 100
+              },
+              "revision": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9-]{0,62}$"
+              },
+              "tag": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9-]{0,62}$"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          }
+        },
+        "client": {
+          "type": "string",
+          "minLength": 1
+        },
+        "client_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "revision": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]{0,62}$"
+        }
+      }
+    },
+    "firebase_hosting": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "site_id",
+        "commit",
+        "public_dir"
+      ],
+      "properties": {
+        "site_id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9-]{2,62}$"
+        },
+        "commit": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{40}$"
+        },
+        "public_dir": {
+          "type": "string",
+          "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[a-zA-Z0-9_./-]+$"
+        }
+      }
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

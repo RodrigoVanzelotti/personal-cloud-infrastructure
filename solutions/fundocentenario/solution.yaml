@@ -1,0 +1,20 @@
+schema_version: 1
+name: fundocentenario
+description: Fundo Centenario static website and FastAPI backend on Firebase Hosting
+  and Cloud Run.
+repositories:
+  website:
+    provider: github
+    slug: RodrigoVanzelotti/fundo-centenario-website
+components:
+  api:
+    type: cloud_run_service
+    repository: website
+  frontend:
+    type: firebase_hosting
+    repository: website
+secrets:
+- smtp-password
+- smtp-username
+- stripe-secret-key
+- stripe-webhook-secret

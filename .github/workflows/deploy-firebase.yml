@@ -1,0 +1,128 @@
+name: Release static Firebase Hosting content
+on:
+  workflow_call:
+    inputs:
+      solution:
+        required: true
+        type: string
+      environment:
+        required: true
+        type: string
+      hosting:
+        required: true
+        type: string
+      project_id:
+        required: true
+        type: string
+    secrets:
+      SOURCE_READ_TOKEN:
+        required: false
+permissions:
+  contents: read
+jobs:
+  release:
+    if: github.ref == 'refs/heads/main'
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(inputs.hosting) }}
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.solution }}-${{ inputs.environment }}
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Check production gate
+        env:
+          DEPLOY_SOLUTION: ${{ inputs.solution }}
+          DEPLOY_ENVIRONMENT: ${{ inputs.environment }}
+          GH_TOKEN: ${{ github.token }}
+        run: python scripts/check_approval.py
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ matrix.repository }}
+          ref: ${{ matrix.commit }}
+          path: source
+          token: ${{ secrets.SOURCE_READ_TOKEN || github.token }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --global firebase-tools@14.3.0
+      - name: Prepare static assets without executing source repository code
+        env:
+          PUBLIC_DIR: ${{ matrix.public_dir }}
+          SITE: ${{ matrix.site_id }}
+          COMMIT: ${{ matrix.commit }}
+        run: |
+          python - <<'PY'
+          import json, os, subprocess, shutil
+          from pathlib import Path
+          source = Path('source').resolve()
+          content = (source / os.environ['PUBLIC_DIR']).resolve()
+          if not content.is_relative_to(source) or not (content / 'index.html').is_file():
+              raise SystemExit('public_dir must contain prebuilt static content including index.html')
+          if any(p.is_symlink() for p in content.rglob('*')):
+              raise SystemExit('Symlinks are not allowed in release content')
+          actual = subprocess.check_output(['git', '-C', 'source', 'rev-parse', 'HEAD'], text=True).strip()
+          if actual != os.environ['COMMIT']:
+              raise SystemExit('Source checkout does not match pinned commit')
+          shutil.copytree(content, 'public', ignore=shutil.ignore_patterns('.git', 'node_modules', '.env*', 'gha-creds-*'))
+          Path('firebase.json').write_text(json.dumps({'hosting': {
+              'site': os.environ['SITE'], 'public': 'public',
+              'ignore': ['**/.*', '**/node_modules/**'],
+          }}))
+          PY
+      - uses: google-github-actions/auth@v3
+        id: auth
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+          project_id: ${{ inputs.project_id }}
+          token_format: access_token
+      - name: Check the latest live release
+        id: live
+        env:
+          PROJECT: ${{ inputs.project_id }}
+          SITE: ${{ matrix.site_id }}
+          SOURCE_COMMIT: ${{ matrix.commit }}
+          ACCESS_TOKEN: ${{ steps.auth.outputs.access_token }}
+        run: python scripts/hosting_release.py
+      - name: Publish pinned content
+        if: steps.live.outputs.deployed != 'true'
+        env:
+          PROJECT: ${{ inputs.project_id }}
+          COMMIT: ${{ matrix.commit }}
+        run: firebase deploy --config firebase.json --project "$PROJECT" --only hosting --non-interactive --message "infra:$GITHUB_SHA source:$COMMIT run:$GITHUB_RUN_ID" --json > firebase-result.json
+      - name: Record release outcome
+        if: always()
+        env:
+          STATUS: ${{ job.status }}
+          SOURCE_COMMIT: ${{ matrix.commit }}
+          SITE: ${{ matrix.site_id }}
+          PROJECT: ${{ inputs.project_id }}
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          record = {'infra_commit': os.environ['GITHUB_SHA'], 'source_commit': os.environ['SOURCE_COMMIT'],
+                    'site_id': os.environ['SITE'], 'project_id': os.environ['PROJECT'],
+                    'status': os.environ['STATUS'], 'run_id': os.environ['GITHUB_RUN_ID']}
+          Path('release-record.json').write_text(json.dumps(record, indent=2))
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as output:
+              output.write('```json\n' + json.dumps(record, indent=2) + '\n```\n')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: firebase-${{ inputs.solution }}-${{ inputs.environment }}-${{ matrix.component }}
+          path: |
+            release-record.json
+            firebase-result.json

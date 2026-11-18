@@ -1,0 +1,48 @@
+name: Prepare validated Terraform stack
+description: Validate manifests, authenticate with WIF, and initialize isolated state.
+inputs:
+  solution:
+    required: true
+    description: Solution directory name
+  environment:
+    required: true
+    description: stage or prod
+  workload_identity_provider:
+    required: true
+    description: Environment-scoped WIF provider
+  service_account:
+    required: true
+    description: Environment-scoped plan or apply identity
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+    - shell: bash
+      run: pip install -r requirements.txt
+    - id: context
+      shell: bash
+      env:
+        SOLUTION: ${{ inputs.solution }}
+        ENVIRONMENT: ${{ inputs.environment }}
+      run: python scripts/context.py "$SOLUTION" "$ENVIRONMENT"
+    - uses: google-github-actions/auth@v3
+      with:
+        workload_identity_provider: ${{ inputs.workload_identity_provider }}
+        service_account: ${{ inputs.service_account }}
+        project_id: ${{ steps.context.outputs.project_id }}
+    - uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: '1.16.6'
+        terraform_wrapper: false
+    - shell: bash
+      env:
+        STATE_BUCKET: ${{ steps.context.outputs.state_bucket }}
+        SOLUTION: ${{ inputs.solution }}
+        ENVIRONMENT: ${{ inputs.environment }}
+      run: |
+        terraform -chdir=terraform/stack init -input=false -reconfigure \
+          -backend-config="bucket=$STATE_BUCKET" \
+          -backend-config="prefix=$SOLUTION/$ENVIRONMENT"
+        terraform -chdir=terraform/stack validate
