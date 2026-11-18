@@ -1,17 +1,34 @@
 # Adopt existing resources
 
-Fundocentenario staging was imported on 2026-11-09 and has a clean live plan. Its 11 existing resources are recorded under `gs://fundocentenario-website-stg-tfstate/fundocentenario/stage/default.tfstate`. The isolated workspace at `.local/adoption/fundocentenario-stage` has the same Terraform stack and manifests, with only its staging manifest enabled. The repository manifests remain disabled because the source repository still owns releases and the central Hosting engine must preserve its rewrites, headers, and revision pinning before handover. See [the verified inventory](inventory.md) for exact scope and remaining work.
+> Current adoption and exact state owners: [reconciliation.md](reconciliation.md). The 2026-11-09 staging-only record below is historical; use the canonical roots and current inventory for further work.
 
-To recheck the imported staging state from a normal PowerShell terminal without creating a service account key, supply a short-lived token only in the process environment:
+
+Current adoption includes Fundocentenario stage and production and both Landing
+Optimizer projects. Their canonical roots and exact remote state locations are in
+[reconciliation.md](reconciliation.md). The stage application still uses its eleven
+original imported Cloud resources; its additional foundation and production are
+now adopted separately. Keep generic release manifests disabled until the source
+workflows and Hosting publication settings have been handed over.
+
+To recheck the stage application from the canonical stack in PowerShell, use an
+explicit account and arguments (not an enabled copy of the manifests):
 
 ```powershell
 $env:GOOGLE_OAUTH_ACCESS_TOKEN = (gcloud.cmd auth print-access-token --account=rodrigo.vanzelotti@fundocentenario.com.br)
-$env:TF_VAR_solution = 'fundocentenario'
-$env:TF_VAR_environment = 'stage'
-terraform -chdir=.local/adoption/fundocentenario-stage/terraform/stack plan -detailed-exitcode
+terraform -chdir=terraform/stack init '-backend-config=bucket=fundocentenario-website-stg-tfstate' '-backend-config=prefix=fundocentenario/stage'
+terraform -chdir=terraform/stack plan -detailed-exitcode '-var=solution=fundocentenario' '-var=environment=stage' '-var=adoption_mode=true'
 ```
 
-Exit code 0 means a clean plan. Tokens expire; obtain a fresh one before later operations. Do not persist the token in backend arguments, plans, or configuration files. Bootstrap state is remote at `bootstrap/fundocentenario/stage/default.tfstate` in the same bucket, and its isolated configuration is at `.local/bootstrap/fundocentenario-stage`. Only its bucket resource has been applied. A full bootstrap plan will still propose CI identities, federation, IAM, and API management; review those before applying them. Do not discard the isolated workspaces before their configuration and state locations are backed up.
+Exit code 0 means a clean plan. Obtain a fresh short-lived token before later
+operations; never save it in backend arguments, plans or configuration files.
+The remaining roots have explicit backends and are planned from their directories.
+
+The stage state bucket keeps its original bootstrap backend and resource address,
+now declared in `terraform/solutions/fundocentenario/stage-state`. Its full plan is
+clean. The old ignored bootstrap workspace is retained only as historical backup;
+use the canonical root going forward. The generic `terraform/bootstrap` remains an
+onboarding template and would propose CI/API resources already owned by specialized
+foundation states if applied wholesale. Review ownership before using that template.
 
 For subsequent environments, complete inventory first. Do not infer a Hosting site ID, service name, runtime identity, image digest, or region from the project name. No repository environment currently authorizes an automatic apply because every environment is disabled.
 

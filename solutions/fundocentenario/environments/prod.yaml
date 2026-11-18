@@ -1,7 +1,9 @@
+# Production infrastructure is adopted by terraform/solutions/fundocentenario/prod.
+# Keep this legacy release manifest disabled to avoid a second owner.
 environment: prod
 enabled: false
 gcp:
   project_id: fundocentenario-website-prd
   region: southamerica-east1
-state_bucket: null
+state_bucket: fundocentenario-website-prd-tfstate
 deployments: {}

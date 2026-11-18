@@ -1,5 +1,8 @@
 # Releases and recovery
 
+> Read [reconciliation.md](reconciliation.md) first to select the canonical root and owning state. The generic YAML release procedures below do not replace the specialized solution roots.
+
+
 Source repositories own tests, builds, and publication. For Cloud Run, publish to Artifact Registry and resolve the immutable `@sha256:...` digest. A source-release workflow can use `gh pr create --body-file ...` or a GitHub App to propose a manifest update here. No source repository workflow is changed by this implementation, and automatic cross-repository PR creation is not configured.
 
 For Firebase, publish tested prebuilt static assets under a known directory at an immutable source commit. The infrastructure release job intentionally does not rebuild content. Do not point `public_dir` at private source code or a directory containing credentials. The job checks Firebase's latest live release and skips publication when a retry already has the same infrastructure and source commits. Other releases are published using Firebase CLI. Firebase deploy output and release messages include the source and infrastructure commits; workflow artifacts record success or failure. GitHub artifact retention is finite; retain those records externally if a longer audit history is required. Firebase Hosting's release history remains the authoritative content deployment record. A YAML reference alone does not prove deployment succeeded.

@@ -25,7 +25,7 @@ locals {
 resource "terraform_data" "manifest" {
   lifecycle {
     precondition {
-      condition     = local.environment.enabled && local.environment.gcp.project_id != null && local.environment.state_bucket != null
+      condition     = (local.environment.enabled || var.adoption_mode) && local.environment.gcp.project_id != null && local.environment.state_bucket != null
       error_message = "Complete inventory and validation before enabling this environment."
     }
     precondition {

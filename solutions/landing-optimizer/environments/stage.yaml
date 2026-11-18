@@ -1,7 +1,0 @@
-environment: stage
-enabled: false
-gcp:
-  project_id: null
-  region: southamerica-east1
-state_bucket: null
-deployments: {}

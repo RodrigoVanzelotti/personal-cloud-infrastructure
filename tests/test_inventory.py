@@ -24,7 +24,7 @@ class InventoryTests(unittest.TestCase):
     def test_failed_queries_remain_explicit(self, cloud):
         result = collect("pilot-stage", "account@example.com")
         self.assertEqual(result["resources"], {})
-        self.assertEqual(len(result["errors"]), 8)
+        self.assertEqual(len(result["errors"]), 14)
 
     @patch("inventory.urlopen")
     @patch("inventory.gcloud")
@@ -44,6 +44,10 @@ class InventoryTests(unittest.TestCase):
         self.assertEqual(result["errors"], {})
         self.assertEqual(len(result["resources"]["hosting_sites"]), 2)
         self.assertNotIn("private-test-token", json.dumps(result))
+        queries = [call.args[2] for call in cloud.call_args_list]
+        for service in ("run", "sql", "firestore", "scheduler", "builds", "asset"):
+            self.assertTrue(any(query[0] == service for query in queries), service)
+        self.assertFalse(any("access" in query or "--enable" in query for query in queries))
         self.assertIn("pageToken=page+2", urlopen.call_args.args[0].full_url)
         for call in urlopen.call_args_list:
             self.assertEqual(call.args[0].get_header("X-goog-user-project"), "pilot-stage")

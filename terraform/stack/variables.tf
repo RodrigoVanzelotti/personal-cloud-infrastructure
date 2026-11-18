@@ -6,6 +6,12 @@ variable "solution" {
   }
 }
 
+variable "adoption_mode" {
+  description = "Allow reviewed manual infrastructure adoption while automatic releases remain disabled."
+  type        = bool
+  default     = false
+}
+
 variable "environment" {
   type = string
   validation {

@@ -12,6 +12,7 @@ PROJECTS = {
     "fundocentenario-website-stg": "rodrigo.vanzelotti@fundocentenario.com.br",
     "fundocentenario-website-prd": "rodrigo.vanzelotti@fundocentenario.com.br",
     "landing-optimizer-landing-page": "rodrigovanzelotti@gmail.com",
+    "landing-optimizer-demo": "rodrigovanzelotti@gmail.com",
 }
 
 
@@ -36,6 +37,15 @@ def collect(project, account):
         "secrets": ["secrets", "list", "--format=json(name,replication)"],
         "buckets": ["storage", "buckets", "list", "--format=json(name,location,versioning)"],
         "service_accounts": ["iam", "service-accounts", "list", "--format=json(email,disabled)"],
+        "cloud_run_jobs": ["run", "jobs", "list", "--format=json(name,metadata.name,metadata.labels)"],
+        "cloud_sql": ["sql", "instances", "list", "--format=json(name,region,databaseVersion,settings.tier)"],
+        "firestore": ["firestore", "databases", "list", "--format=json(name,type,locationId)"],
+        "scheduler": ["scheduler", "jobs", "list", "--location=southamerica-east1",
+                      "--format=json(name,schedule,state,httpTarget.uri,httpTarget.oidcToken.serviceAccountEmail)"],
+        "build_triggers": ["builds", "triggers", "list", "--region=global",
+                           "--format=json(id,name,disabled,github,filename,serviceAccount)"],
+        "assets": ["asset", "search-all-resources", f"--scope=projects/{project}",
+                   "--format=json(name,assetType,location,displayName)"],
     }
     inventory = {"account": account, "resources": {}, "errors": {}}
     for name, arguments in queries.items():

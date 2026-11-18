@@ -87,6 +87,8 @@ def manifests(solution_name, environment_name, *, root=ROOT, deployable=False):
     if not re.fullmatch(NAME, solution_name) or environment_name not in ("stage", "prod"):
         raise ValueError("Invalid solution or environment name")
     directory = root / "solutions" / solution_name
+    if not (directory / "solution.yaml").is_file() and any((directory / "terraform").glob("*/providers.tf")):
+        raise ValueError(f"{solution_name} uses native Terraform; see solutions/{solution_name}/README.md instead of the generic YAML pipeline")
     solution = load(directory / "solution.yaml")
     environment = load(directory / "environments" / f"{environment_name}.yaml")
     validate(solution, environment, deployable=deployable)

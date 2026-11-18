@@ -26,7 +26,9 @@ def changed(paths, root=ROOT):
     # Removing a manifest must never silently orphan an enabled state.
     for path in paths:
         if path.startswith("solutions/") and path.endswith(".yaml") and not (root / path).exists():
-            raise ValueError(f"Deleted manifest: {path}; retire resources explicitly before removal")
+            native = root / "solutions" / path.split("/")[1] / "terraform"
+            if not any(native.glob("*/providers.tf")):
+                raise ValueError(f"Deleted manifest: {path}; retire resources explicitly before removal")
     return result
 
 

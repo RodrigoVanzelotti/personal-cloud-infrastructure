@@ -54,6 +54,15 @@ class ManifestTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "awaits inventory"):
             validate(solution, environment, deployable=True)
 
+    def test_native_solution_cannot_be_deployed_by_the_generic_yaml_pipeline(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            native = root / "solutions" / "native" / "terraform" / "project"
+            native.mkdir(parents=True)
+            (native / "providers.tf").write_text('terraform { backend "gcs" {} }')
+            with self.assertRaisesRegex(ValueError, "uses native Terraform"):
+                manifests("native", "prod", root=root, deployable=True)
+
     def test_cloud_run_and_hosting(self):
         solution, environment = fixture()
         validate(solution, environment, deployable=True)
@@ -144,6 +153,10 @@ class ManifestTests(unittest.TestCase):
             self.assertEqual(changed(["README.md"], root), [])
             with self.assertRaisesRegex(ValueError, "Deleted manifest"):
                 changed(["solutions/deleted/solution.yaml"], root)
+            native = root / "solutions" / "native" / "terraform" / "v1"
+            native.mkdir(parents=True)
+            (native / "providers.tf").write_text('terraform { backend "gcs" {} }')
+            self.assertEqual(changed(["solutions/native/solution.yaml"], root), [])
             prod["gcp"] = stage["gcp"]
             prod["deployments"]["api"]["service_account"] = stage["deployments"]["api"]["service_account"]
             (directory / "environments" / "prod.yaml").write_text(yaml.safe_dump(prod))

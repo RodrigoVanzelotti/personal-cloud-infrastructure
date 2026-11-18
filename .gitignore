@@ -11,3 +11,7 @@ __pycache__/
 gha-creds-*.json
 .env
 release-record.json
+.build/
+install.html
+smoke-result.json
+tools/

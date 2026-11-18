@@ -5,6 +5,7 @@ variable "deployment" {
     service_name         = string
     image                = string
     service_account      = string
+    cloud_sql_instances  = optional(list(string), [])
     public               = bool
     ingress              = string
     port                 = number
@@ -53,6 +54,13 @@ resource "google_cloud_run_v2_service" "this" {
   }
 
   template {
+    dynamic "volumes" {
+      for_each = length(var.deployment.cloud_sql_instances) == 0 ? [] : [1]
+      content {
+        name = "cloudsql"
+        cloud_sql_instance { instances = var.deployment.cloud_sql_instances }
+      }
+    }
     revision                         = var.deployment.revision
     service_account                  = var.deployment.service_account
     timeout                          = "${var.deployment.timeout_seconds}s"
@@ -62,6 +70,13 @@ resource "google_cloud_run_v2_service" "this" {
       max_instance_count = var.deployment.scaling.max_instances
     }
     containers {
+      dynamic "volume_mounts" {
+        for_each = length(var.deployment.cloud_sql_instances) == 0 ? [] : [1]
+        content {
+          name       = "cloudsql"
+          mount_path = "/cloudsql"
+        }
+      }
       image = var.deployment.image
       ports { container_port = var.deployment.port }
       resources {

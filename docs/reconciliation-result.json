@@ -1,0 +1,246 @@
+{
+  "date": "2026-11-18",
+  "newly_imported_instances": 293,
+  "new_state_buckets": 1,
+  "roots": {
+    "landing-optimizer-v1": {
+      "root": "solutions/landing-optimizer/terraform/v1",
+      "bucket": "landing-optimizer-v1-tfstate-505424813528",
+      "prefix": "landing-optimizer/v1",
+      "exit_code": 0,
+      "clean": true,
+      "managed_instances": 40
+    },
+    "landing-optimizer-project": {
+      "root": "solutions/landing-optimizer/terraform/project",
+      "bucket": "landing-optimizer-v1-tfstate-505424813528",
+      "prefix": "landing-optimizer/project",
+      "exit_code": 0,
+      "clean": true,
+      "managed_instances": 115
+    },
+    "fundocentenario-stage-app": {
+      "root": "terraform/stack",
+      "bucket": "fundocentenario-website-stg-tfstate",
+      "prefix": "fundocentenario/stage",
+      "exit_code": 0,
+      "clean": true,
+      "managed_instances": 12
+    },
+    "fundocentenario-stage-foundation": {
+      "root": "terraform/solutions/fundocentenario/stage",
+      "bucket": "fundocentenario-website-stg-tfstate",
+      "prefix": "fundocentenario/stage-foundation",
+      "exit_code": 0,
+      "clean": true,
+      "managed_instances": 89
+    },
+    "fundocentenario-prod": {
+      "root": "terraform/solutions/fundocentenario/prod",
+      "bucket": "fundocentenario-website-prd-tfstate",
+      "prefix": "fundocentenario/prod",
+      "exit_code": 0,
+      "clean": true,
+      "managed_instances": 90
+    },
+    "fundocentenario-stage-state": {
+      "root": "terraform/solutions/fundocentenario/stage-state",
+      "bucket": "fundocentenario-website-stg-tfstate",
+      "prefix": "bootstrap/fundocentenario/stage",
+      "exit_code": 0,
+      "clean": true,
+      "managed_instances": 1
+    }
+  },
+  "tests": {
+    "repository": 17,
+    "central_release": 10,
+    "legacy_entry_point": 5
+  },
+  "terraform_fmt": "passed",
+  "terraform_validate_roots": 7,
+  "committed": false,
+  "pushed": false,
+  "pending": [
+    "Publish prepared central workflow and callers through the owner process",
+    "Hand over marketing/demo Cloud Build and Fundocentenario deployment workflows",
+    "Preserve Hosting rewrites/headers before central Fundocentenario content releases",
+    "Install prepared user-global agent rules outside this session write roots"
+  ],
+  "duplicate_google_resource_ownership": false,
+  "scope": "Identified resources in registered solutions; discovery limits are documented separately",
+  "handover": {
+    "status": "prepared locally, not applied or published",
+    "publication_allowed": false,
+    "native_solution": "solutions/landing-optimizer",
+    "services": [
+      "api",
+      "ai",
+      "dashboard",
+      "landing-page",
+      "demo"
+    ],
+    "planned_iam_grants": 16,
+    "planned_federation_updates": 1,
+    "planned_legacy_trigger_updates": 2,
+    "planned_service_accounts": 1,
+    "handover_applied": false,
+    "plans": {
+      "v1": {
+        "creates": 0,
+        "updates": 1,
+        "deletes": 0,
+        "resources": [
+          {
+            "address": "google_iam_workload_identity_pool_provider.github",
+            "type": "google_iam_workload_identity_pool_provider",
+            "actions": [
+              "update"
+            ]
+          }
+        ]
+      },
+      "project": {
+        "creates": 17,
+        "updates": 2,
+        "deletes": 0,
+        "resources": [
+          {
+            "address": "google_artifact_registry_repository_iam_member.demo_deployer",
+            "type": "google_artifact_registry_repository_iam_member",
+            "actions": [
+              "create"
+            ]
+          },
+          {
+            "address": "google_artifact_registry_repository_iam_member.landing_page_deployer",
+            "type": "google_artifact_registry_repository_iam_member",
+            "actions": [
+              "create"
+            ]
+          },
+          {
+            "address": "google_cloud_run_v2_service_iam_member.demo_deployer",
+            "type": "google_cloud_run_v2_service_iam_member",
+            "actions": [
+              "create"
+            ]
+          },
+          {
+            "address": "google_cloud_run_v2_service_iam_member.landing_page_deployer",
+            "type": "google_cloud_run_v2_service_iam_member",
+            "actions": [
+              "create"
+            ]
+          },
+          {
+            "address": "google_cloudbuild_trigger.demo",
+            "type": "google_cloudbuild_trigger",
+            "actions": [
+              "update"
+            ]
+          },
+          {
+            "address": "google_cloudbuild_trigger.main",
+            "type": "google_cloudbuild_trigger",
+            "actions": [
+              "update"
+            ]
+          },
+          {
+            "address": "google_project_iam_member.demo_release_read[\"roles/iam.securityReviewer\"]",
+            "type": "google_project_iam_member",
+            "actions": [
+              "create"
+            ]
+          },
+          {
+            "address": "google_project_iam_member.demo_release_read[\"roles/viewer\"]",
+            "type": "google_project_iam_member",
+            "actions": [
+              "create"
+            ]
+          },
+          {
+            "address": "google_project_iam_member.sites_read[\"roles/firebaserules.viewer\"]",
+            "type": "google_project_iam_member",
+            "actions": [
+              "create"
+            ]
+          },
+          {
+            "address": "google_project_iam_member.sites_read[\"roles/iam.securityReviewer\"]",
+            "type": "google_project_iam_member",
+            "actions": [
+              "create"
+            ]
+          },
+          {
+            "address": "google_project_iam_member.sites_read[\"roles/serviceusage.serviceUsageConsumer\"]",
+            "type": "google_project_iam_member",
+            "actions": [
+              "create"
+            ]
+          },
+          {
+            "address": "google_project_iam_member.sites_read[\"roles/viewer\"]",
+            "type": "google_project_iam_member",
+            "actions": [
+              "create"
+            ]
+          },
+          {
+            "address": "google_service_account.sites_deployer",
+            "type": "google_service_account",
+            "actions": [
+              "create"
+            ]
+          },
+          {
+            "address": "google_service_account_iam_member.demo_runtime",
+            "type": "google_service_account_iam_member",
+            "actions": [
+              "create"
+            ]
+          },
+          {
+            "address": "google_service_account_iam_member.landing_page_runtime",
+            "type": "google_service_account_iam_member",
+            "actions": [
+              "create"
+            ]
+          },
+          {
+            "address": "google_service_account_iam_member.sites_github[\"1437556030\"]",
+            "type": "google_service_account_iam_member",
+            "actions": [
+              "create"
+            ]
+          },
+          {
+            "address": "google_service_account_iam_member.sites_github[\"1437893209\"]",
+            "type": "google_service_account_iam_member",
+            "actions": [
+              "create"
+            ]
+          },
+          {
+            "address": "google_storage_bucket_iam_member.sites_state_read",
+            "type": "google_storage_bucket_iam_member",
+            "actions": [
+              "create"
+            ]
+          },
+          {
+            "address": "google_storage_bucket_iam_member.sites_state_write",
+            "type": "google_storage_bucket_iam_member",
+            "actions": [
+              "create"
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "verification_scope": "Historical Cloud reconciliation; unapplied handover differences are reported separately"
+}

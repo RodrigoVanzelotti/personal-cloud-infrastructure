@@ -1,8 +1,10 @@
 # Personal Cloud Infrastructure
 
-YAML describes each solution and its desired stage/prod releases. Terraform manages Cloud Run, Secret Manager secret containers and access, optional Artifact Registry repositories, and Firebase Hosting sites. GitHub Actions releases Firebase content. Secret values stay outside Git and Terraform.
+> Landing Optimizer is self-contained under [solutions/landing-optimizer](solutions/landing-optimizer/README.md): native Terraform, five secrets and five service release paths. The source-workflow handover is prepared locally and not published. See [the current reconciliation record](docs/reconciliation.md).
 
-The registrations are **fundocentenario** and **landing-optimizer**. Direct CLI inventory is complete for the three known projects. Fundocentenario staging has 11 existing resources imported into remote Terraform state and a verified clean plan. **Central deployments remain disabled pending source-workflow handover and preservation of Firebase rewrites and headers.** Existing application deployments were not changed. Landing Optimizer's existing landing-page project is provisionally assigned to prod; stage has no project yet. See [the inventory and adoption status](docs/inventory.md).
+This repository centralizes Cloud infrastructure and release execution for multiple solutions. Terraform owns the adopted Cloud Run services/jobs, databases, Firestore rules/indexes, Scheduler, IAM/federation, APIs, storage, image repositories, secret containers/access and Hosting sites. Landing Optimizer uses native Terraform in its solution directory; the generic YAML stack serves Fundocentenario. Exact roots and states are listed in [the ownership table](docs/reconciliation.md). Secret payloads and application data stay outside Git and Terraform.
+
+The registrations are **fundocentenario** and **landing-optimizer**. The active inventory contains the four projects belonging to the registered solutions. Adopted infrastructure uses the existing remote states plus separate states for newly adopted scopes. **Automatic deployment handovers remain pending publication by the owner; Fundocentenario Hosting also needs a publisher preserving its existing rewrites and headers.** Application serving versions and access were preserved. See [the current inventory](docs/inventory.md) and [remaining handovers](docs/reconciliation.md).
 
 Use Python 3.12, Terraform 1.16.6, and Google Cloud CLI. CI uses the same Terraform version as the verified imported state. The Google providers are constrained to major version 7 and locked to 7.46.2; Hosting uses `google-beta`, as required by [the provider documentation](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/firebase_hosting_site). Install the two validation dependencies and run the local checks:
 
@@ -10,7 +12,9 @@ Use Python 3.12, Terraform 1.16.6, and Google Cloud CLI. CI uses the same Terraf
 python -m pip install -r requirements.txt
 python scripts/validate.py
 python -m unittest discover -s tests -v
+python -m unittest discover -s solutions/landing-optimizer/terraform/v1/tests -v
 terraform fmt -check -recursive terraform
+terraform fmt -check -recursive solutions
 ```
 
 Validate one environment with `python scripts/validate.py --solution fundocentenario --environment stage`. Add `--deployable` to require a complete, enabled configuration. Disabled drafts may omit project IDs, state buckets, repositories, and deployments; supplied fields still must satisfy the schemas. Enabled environments must declare every component deployment. Duplicate YAML keys, unknown fields, invalid references, duplicate resources across states, mutable versions, and shared stage/prod projects are rejected.
@@ -19,7 +23,8 @@ The repository is organized around:
 
 | Path | Responsibility |
 | --- | --- |
-| `solutions/<solution>/solution.yaml` | Repositories, component types, secret identifiers |
+| `solutions/landing-optimizer/` | Complete native Terraform, secrets and release configuration; start at its README |
+| `solutions/<solution>/solution.yaml` | Repositories, component types and secret identifiers for YAML-managed solutions |
 | `solutions/<solution>/environments/{stage,prod}.yaml` | Explicit environment configuration and pinned releases |
 | `schemas/` | JSON Schema contract, plus semantic validation in `scripts/validate.py` |
 | `terraform/stack/` | One generic YAML-consuming stack |
@@ -100,4 +105,4 @@ The bootstrap scopes [Workload Identity Federation](https://docs.cloud.google.co
 
 Infrastructure plans reject all deletions and replacements, including resources removed from a module. Persistent resources also have Terraform destruction protection. These protections do not detect every harmful in-place change; review the first imported plan carefully. A release failure can leave Cloud Run updated while Hosting remains on its previous release; deployments across engines are not atomic. Release records identify the infrastructure commit, Hosting commit, and outcome. No automatic rollback is attempted.
 
-Verification on 2026-11-09: all 16 Python tests, manifest validation, Terraform formatting, and both Terraform roots' provider validation pass. Staging's post-import live plan reports no changes; its backend health, Hosting homepage, and Hosting API health checks return HTTP 200. GitHub environment setup, source deployment handover, production imports, Landing Optimizer imports, and central application releases remain outstanding.
+Verification on 2026-11-18: 17 repository tests and 10 central release tests pass, along with the legacy entry-point test suite, manifest validation, Terraform formatting and validation of all seven roots. The exact live-plan results, imported resource counts, read-only inventory limits and remaining release handovers are recorded in [reconciliation.md](docs/reconciliation.md). No commit or push was performed.

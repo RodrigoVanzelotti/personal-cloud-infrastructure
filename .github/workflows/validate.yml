@@ -18,13 +18,15 @@ jobs:
       - run: pip install -r requirements.txt
       - run: python scripts/validate.py
       - run: python -m unittest discover -s tests -v
+      - run: python -m unittest discover -s solutions/landing-optimizer/terraform/v1/tests -v
       - uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: '1.16.6'
       - run: terraform fmt -check -recursive terraform
-      - name: Validate both Terraform roots without cloud credentials
+      - run: terraform fmt -check -recursive solutions
+      - name: Validate all Terraform roots without cloud credentials
         run: |
-          for root in terraform/bootstrap terraform/stack; do
+          for root in terraform/bootstrap terraform/stack solutions/landing-optimizer/terraform/v1 solutions/landing-optimizer/terraform/project terraform/solutions/fundocentenario/stage terraform/solutions/fundocentenario/prod terraform/solutions/fundocentenario/stage-state; do
             terraform -chdir="$root" init -backend=false -input=false
             terraform -chdir="$root" validate
           done
