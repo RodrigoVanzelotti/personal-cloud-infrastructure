@@ -1,5 +1,29 @@
 # Landing Optimizer organization and pipeline handover
 
+## CI deploy correction — 2026-11-20
+
+[Dashboard run 44745988631](https://github.com/RodrigoVanzelotti/landing-optimizer-dashboard/actions/runs/44745988631)
+and [API run 44745973112](https://github.com/RodrigoVanzelotti/landing-optimizer-api/actions/runs/44745973112)
+passed build, tests and dependency audits. Both deploys rejected a planned change
+to `google_iam_workload_identity_pool_provider.github`: marketing/demo federation
+had been published in Terraform before its administrator handover was applied.
+The local correction retains the three currently authorized repository IDs;
+the release guard still rejects all unrelated infrastructure changes.
+
+The API run had already updated and successfully executed the migration job before
+its final plan failed. Release snapshots now preserve that job's image separately
+from the serving API image, so dashboard/AI releases cannot roll it back or fail
+their resource allowlist. API releases update both image inputs together.
+The checked-in migration image snapshot matches the owning remote state.
+
+Validation: 11 central release tests and 5 compatibility tests passed; Terraform
+format and validation passed using the existing local provider override. Three
+full refreshed production plans passed: baseline had no changes, dashboard changed
+only the dashboard service, and API changed only the API service (the migration
+job already has that candidate image). Ignored evidence is in `.local/ci-fix/`.
+No plan was applied and no commit, push or GitHub rerun was performed. Publish the
+central correction before retrying the two application workflows.
+
 ## Ready locally
 
 - Complete native Terraform source lives under `solutions/landing-optimizer/terraform/{v1,project}`.
@@ -70,6 +94,11 @@ When publication is explicitly allowed again:
 2. Publish the central repository first and confirm its validation workflow.
 3. Regenerate/review the handover plans with fresh state; do not apply an old saved plan.
 4. Hold source pushes during the cutover and wait for any existing legacy builds.
+   Add repository IDs `1437893209` and `1437556030` to the V1 provider's
+   `attribute_condition` in `solutions/landing-optimizer/terraform/v1/cicd.tf`
+   as part of this administrator handover, then review the regenerated full plan.
+   Keeping that pending expansion out of the active V1 configuration prevents
+   API/AI/dashboard releases from trying to change IAM.
    After central validation, coordinate the reviewed permission grants, legacy-trigger
    disabling and source caller publication so the two deploy paths do not run together.
    Existing serving revisions remain available throughout this configuration change.

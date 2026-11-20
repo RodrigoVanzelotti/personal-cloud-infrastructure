@@ -17,6 +17,11 @@ variable "image" {
   default  = null
   nullable = true
 }
+variable "migration_image" {
+  description = "Preserve the migration job image when releasing another service after an interrupted API release."
+  type        = string
+  default     = null
+}
 variable "deploy_api" {
   type    = bool
   default = false
@@ -110,7 +115,7 @@ resource "google_cloud_run_v2_job" "migrate" {
         cloud_sql_instance { instances = [google_sql_database_instance.postgres.connection_name] }
       }
       containers {
-        image   = var.image
+        image   = coalesce(var.migration_image, var.image)
         command = ["node", "node_modules/prisma/build/index.js"]
         args    = ["migrate", "deploy"]
         resources { limits = { cpu = "1", memory = "512Mi" } }

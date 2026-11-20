@@ -92,6 +92,8 @@ def deployed_images(state, stack="v1"):
     components = {name: config for name, config in COMPONENTS.items() if config["stack"] == stack}
     for resource in state.get("resources", []):
         address = ".".join(filter(None, [resource.get("module"), resource["type"], resource.get("name", "this")]))
+        if stack == "v1" and address == "google_cloud_run_v2_job.migrate":
+            release["migration_image"] = resource["instances"][0]["attributes"]["template"][0]["template"][0]["containers"][0]["image"]
         for name, config in components.items():
             if address != config["address"]:
                 continue
@@ -161,6 +163,8 @@ def main():
             return
         release = deployed_images(json.loads(run([*command, "state", "pull"], capture=True)), config["stack"])
         release[config["image"]] = image
+        if component == "api":
+            release["migration_image"] = image
         if config["stack"] == "project":
             release[component.replace("-", "_") + "_revision_labels"] = {"managed-by": "personal-cloud-infrastructure", "commit-sha": sha}
         (stack_root / "release.auto.tfvars.json").write_text(json.dumps(release, indent=2) + "\n")

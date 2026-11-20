@@ -50,8 +50,9 @@ updating the corresponding Terraform reference. Never run bootstrap for a releas
 
 Every service repository's `CI` workflow calls the central reusable workflow
 `.github/workflows/deploy-landing-optimizer.yml@main`. GitHub authentication uses
-Workload Identity Federation restricted to the five source repository IDs, `main`,
-and `push`/`workflow_dispatch`. No service-account JSON key is required.
+Workload Identity Federation currently permits the API/AI/dashboard repository IDs,
+`main`, and `push`/`workflow_dispatch`. Marketing/demo federation must be added
+during their coordinated handover. No service-account JSON key is required.
 API/AI/dashboard keep their existing deployer. Marketing/demo use a separate
 `landing-optimizer-sites` identity with service-scoped deploy permissions, source
 image repositories, runtime act-as and scoped state/lock writes. It receives no
@@ -60,7 +61,8 @@ IAM. Existing serving runtime identities are preserved by this handover.
 
 The central script builds/tests the source, pushes an immutable digest, obtains
 the existing shared GCS deployment lock, reloads the current images from the owning
-remote state, and updates only the selected service. API releases run the migration
+remote state, preserves the migration job's current image independently of the API
+service image, and updates only the selected service. API releases run the migration
 job successfully before updating the API. Plans reject replacements, deletions,
 IAM changes and changes to other services during an application release. Health
 checks follow each deployment. There is no automatic database rollback.

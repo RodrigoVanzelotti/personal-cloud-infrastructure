@@ -19,14 +19,51 @@ def service(module, image, resource_type="google_cloud_run_v2_service"):
 
 
 class ReleaseTests(unittest.TestCase):
-    def test_preserves_current_service_images_and_ignores_migration_image(self):
+    def test_preserves_service_and_migration_images_after_interrupted_api_release(self):
         state = {"resources": [service("module.api[0]", "api@sha256:current"),
                               service("module.dashboard[0]", "dashboard@sha256:current"),
                               service("module.ai[0]", "ai@sha256:current"),
-                              service("module.api[0]", "job@sha256:old", "google_cloud_run_v2_job")]}
+                              {"type": "google_cloud_run_v2_job", "name": "migrate", "instances": [{"attributes": {
+                                  "template": [{"template": [{"containers": [{"image": "api@sha256:migrated"}]}]}],
+                              }}]}]}
         release = ci_release.deployed_images(state)
         self.assertEqual(release, {"deploy_api": True, "image": "api@sha256:current",
-                                  "dashboard_image": "dashboard@sha256:current", "ai_image": "ai@sha256:current"})
+                                  "dashboard_image": "dashboard@sha256:current", "ai_image": "ai@sha256:current",
+                                  "migration_image": "api@sha256:migrated"})
+
+    def test_dashboard_preserves_migration_image_and_api_updates_it(self):
+        state = {"resources": [service("module.api[0]", "api@sha256:current"),
+                              service("module.dashboard[0]", "dashboard@sha256:current"),
+                              service("module.ai[0]", "ai@sha256:current"),
+                              {"type": "google_cloud_run_v2_job", "name": "migrate", "instances": [{"attributes": {
+                                  "template": [{"template": [{"containers": [{"image": "api@sha256:migrated"}]}]}],
+                              }}]}]}
+        previous = os.getcwd()
+        try:
+            with tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary) / "v1"
+                root.mkdir()
+                for component in ("dashboard", "api"):
+                    with self.subTest(component=component), patch.dict(os.environ, {
+                        "COMPONENT": component, "GITHUB_SHA": "a" * 40,
+                        "GITHUB_REPOSITORY": f"RodrigoVanzelotti/landing-optimizer-{component}",
+                        "GITHUB_RUN_ID": "123", "GITHUB_RUN_ATTEMPT": "1",
+                        "GITHUB_STEP_SUMMARY": str(root / "summary.md"),
+                    }), patch("ci_release.ROOT", root), patch("ci_release.github_request", return_value={"sha": "a" * 40}), \
+                            patch("ci_release.run", return_value=json.dumps(state)), \
+                            patch("ci_release.build", return_value=f"{component}@sha256:new"), \
+                            patch("ci_release.deployment_lock"), patch("ci_release.apply") as apply, \
+                            patch("ci_release.cloud") as cloud, patch("ci_release.urllib.request.urlopen") as response:
+                        response.return_value.__enter__.return_value.status = 200
+                        ci_release.main()
+                        release = json.loads((root / "release.auto.tfvars.json").read_text())
+                        self.assertEqual(release["migration_image"], "api@sha256:new" if component == "api" else "api@sha256:migrated")
+                        self.assertEqual(release["image"], "api@sha256:new" if component == "api" else "api@sha256:current")
+                        self.assertEqual(apply.call_count, 2 if component == "api" else 1)
+                        self.assertEqual(cloud.call_count, 1 if component == "api" else 0)
+                os.chdir(previous)
+        finally:
+            os.chdir(previous)
 
     def test_missing_live_images_cannot_remove_existing_services(self):
         with self.assertRaisesRegex(RuntimeError, "missing"):
@@ -49,7 +86,8 @@ class ReleaseTests(unittest.TestCase):
     @patch("deploy.cloud", return_value="test-token")
     @patch("deploy.run")
     def test_release_cannot_change_iam_or_another_service(self, run, cloud):
-        for address in ("google_project_iam_member.owner", "module.dashboard[0].google_cloud_run_v2_service.this"):
+        for address in ("google_iam_workload_identity_pool_provider.github", "google_project_iam_member.owner",
+                        "module.dashboard[0].google_cloud_run_v2_service.this"):
             with self.subTest(address=address):
                 run.side_effect = [None, json.dumps({"resource_changes": [{"address": address, "change": {"actions": ["update"]}}]})]
                 with self.assertRaisesRegex(RuntimeError, "unrelated"):

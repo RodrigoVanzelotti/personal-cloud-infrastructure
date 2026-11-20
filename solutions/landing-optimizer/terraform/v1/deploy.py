@@ -114,6 +114,7 @@ def main():
     release_path = ROOT / "release.auto.tfvars.json"
     release = json.loads(release_path.read_text()) if release_path.exists() else {"deploy_api": False}
     release["image"] = image
+    release["migration_image"] = image
     release_path.write_text(json.dumps(release, indent=2) + "\n")
     apply("google_cloud_run_v2_job.migrate")
     cloud("run", "jobs", "execute", "landing-optimizer-migrate-v1", f"--region={REGION}", "--wait")

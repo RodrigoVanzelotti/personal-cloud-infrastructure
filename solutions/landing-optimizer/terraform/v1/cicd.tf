@@ -16,7 +16,8 @@ resource "google_iam_workload_identity_pool_provider" "github" {
     "attribute.repository_id"       = "assertion.repository_id"
     "attribute.repository_owner_id" = "assertion.repository_owner_id"
   }
-  attribute_condition = "assertion.repository_owner_id == '85701210' && assertion.repository_id in ['1289468641', '1289472289', '1289484739', '1437893209', '1437556030'] && assertion.ref == 'refs/heads/main' && assertion.event_name in ['push', 'workflow_dispatch']"
+  # Add marketing/demo only during their coordinated Cloud handover (docs/handover-status.md).
+  attribute_condition = "assertion.repository_owner_id == '85701210' && assertion.repository_id in ['1289468641', '1289472289', '1289484739'] && assertion.ref == 'refs/heads/main' && assertion.event_name in ['push', 'workflow_dispatch']"
   oidc { issuer_uri = "https://token.actions.githubusercontent.com" }
 }
 
