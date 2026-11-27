@@ -17,7 +17,11 @@ concurrency:
 
 jobs:
   deploy:
-    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    # Enable marketing and demo here as part of the coordinated cutover in docs/handover-status.md.
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
+      (inputs.component == 'api' || inputs.component == 'ai' || inputs.component == 'dashboard')
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:

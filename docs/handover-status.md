@@ -100,7 +100,8 @@ When publication is explicitly allowed again:
    Keeping that pending expansion out of the active V1 configuration prevents
    API/AI/dashboard releases from trying to change IAM.
    After central validation, coordinate the reviewed permission grants, legacy-trigger
-   disabling and source caller publication so the two deploy paths do not run together.
+   disabling and enabling `landing-page` and `demo` in the central workflow's deploy
+   condition so the two deploy paths do not run together.
    Existing serving revisions remain available throughout this configuration change.
 5. Verify all five central releases and health checks, then clean post-release plans
    with current image/label inputs and update this record. Leave the legacy triggers
