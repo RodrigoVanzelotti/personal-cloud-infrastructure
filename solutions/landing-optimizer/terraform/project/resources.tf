@@ -1,7 +1,7 @@
 resource "google_cloud_run_v2_service" "demo" {
   provider             = google.demo
   client               = "gcloud"
-  client_version       = "591.0.0"
+  client_version       = "594.0.0"
   default_uri_disabled = false
   deletion_policy      = "DELETE"
   deletion_protection  = true
@@ -200,7 +200,7 @@ resource "google_firestore_database" "main" {
 }
 resource "google_cloud_run_v2_service" "main" {
   client               = "gcloud"
-  client_version       = "593.0.0"
+  client_version       = "594.0.1"
   default_uri_disabled = false
   deletion_policy      = "DELETE"
   deletion_protection  = true

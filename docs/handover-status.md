@@ -91,17 +91,20 @@ updates disable the old triggers and remove their raw Cloud Run deploy steps.
 When publication is explicitly allowed again:
 
 1. Revalidate against current remote main heads, preserving unrelated product work.
-2. Publish the central repository first and confirm its validation workflow.
-3. Regenerate/review the handover plans with fresh state; do not apply an old saved plan.
-4. Hold source pushes during the cutover and wait for any existing legacy builds.
-   Add repository IDs `1437893209` and `1437556030` to the V1 provider's
-   `attribute_condition` in `solutions/landing-optimizer/terraform/v1/cicd.tf`
-   as part of this administrator handover, then review the regenerated full plan.
-   Keeping that pending expansion out of the active V1 configuration prevents
-   API/AI/dashboard releases from trying to change IAM.
-   After central validation, coordinate the reviewed permission grants, legacy-trigger
-   disabling and enabling `landing-page` and `demo` in the central workflow's deploy
-   condition so the two deploy paths do not run together.
+2. Regenerate and review the handover plans with a fresh Terraform refresh. Use
+   the refreshed Cloud Run images, revision labels and client versions in the
+   project plan because legacy builds can update them outside Terraform state.
+3. Coordinate central publication with the Cloud changes below, and confirm
+   the central validation workflow.
+4. Hold source pushes and workflow dispatches during the cutover and wait for
+   in-flight releases and legacy builds. The staged V1 configuration adds
+   landing-page repository ID `1437893209` and demo repository ID `1437556030`
+   to the provider. Coordinate publishing that configuration with the reviewed
+   administrator apply before resuming API, AI or dashboard releases, whose
+   plans reject changes to the provider.
+   The project plan includes the scoped release identity and the legacy-trigger
+   retirement. Coordinate the project apply with publication and validation of
+   the replacement workflow before resuming landing-page and demo pushes.
    Existing serving revisions remain available throughout this configuration change.
 5. Verify all five central releases and health checks, then clean post-release plans
    with current image/label inputs and update this record. Leave the legacy triggers
